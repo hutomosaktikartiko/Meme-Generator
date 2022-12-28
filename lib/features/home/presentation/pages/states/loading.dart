@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../shared/widgets/custom_shimmer.dart';
+import '../../../../../shared/widgets/shimmers/custom_shimmer.dart';
 
 class Loading extends StatelessWidget {
   const Loading({super.key});

@@ -8,6 +8,8 @@ class CustomSnackbar {
     showSnackbar(
       context: context,
       snackBar: SnackBar(
+        behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.startToEnd,
         content: Text(label),
         backgroundColor: Colors.green,
       ),
@@ -21,8 +23,25 @@ class CustomSnackbar {
     showSnackbar(
       context: context,
       snackBar: SnackBar(
+        behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.startToEnd,
         content: Text(label),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  static warning({
+    required BuildContext context,
+    required String label,
+  }) {
+    showSnackbar(
+      context: context,
+      snackBar: SnackBar(
+        behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.startToEnd,
+        content: Text(label),
+        backgroundColor: Colors.orange,
       ),
     );
   }

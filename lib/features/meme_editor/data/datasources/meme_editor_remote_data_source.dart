@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/error/exception.dart';
 import '../../../../core/local_storage/dot_env_info.dart';
 import '../../domain/entities/caption_image_entity.dart';
+import '../../domain/entities/text_caption_entity.dart';
 import '../models/caption_image_model.dart';
 
 abstract class MemeEditorRemoteDataSource {
@@ -13,8 +14,7 @@ abstract class MemeEditorRemoteDataSource {
   /// Params memeImageId for image id, text0 for top meme caption, and text1 for bottom meme caption.
   Future<CaptionImageEntity> setCaptionImage({
     required String? memeImageId,
-    required String text0,
-    required String text1,
+    required List<TextCaptionEntity> text,
   });
 }
 
@@ -30,8 +30,7 @@ class MemeEditorRemoteDataSourceImpl implements MemeEditorRemoteDataSource {
   @override
   Future<CaptionImageEntity> setCaptionImage({
     required String? memeImageId,
-    required String text0,
-    required String text1,
+    required List<TextCaptionEntity> text,
   }) async {
     try {
       final String? apiUrl = dotEnvInfo.imgflipApiUrl();
@@ -46,8 +45,7 @@ class MemeEditorRemoteDataSourceImpl implements MemeEditorRemoteDataSource {
         "template_id": memeImageId,
         "username": username,
         "password": password,
-        "text0": text0,
-        "text1": text1,
+        "boxes": text.map((e) => e.toJson()).toList(),
       });
 
       final Response response = await dio.post(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/error/failure.dart';
 import '../../../domain/entities/caption_image_entity.dart';
+import '../../../domain/entities/text_caption_entity.dart';
 import '../../../domain/usecases/set_caption_image.dart';
 
 part 'caption_image_state.dart';
@@ -20,16 +21,14 @@ class CaptionImageCubit extends Cubit<CaptionImageState> {
 
   Future<bool> setCaption({
     required String? memeImageId,
-    required String text0,
-    required String text1,
+    required List<TextCaptionEntity> text,
   }) async {
     emit(CaptionImageLoading());
 
     final result = await setCaptionImage(
       Params(
         memeImageId: memeImageId,
-        text0: text0,
-        text1: text1,
+        text: text,
       ),
     );
 

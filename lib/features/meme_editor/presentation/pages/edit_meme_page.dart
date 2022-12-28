@@ -3,18 +3,17 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/directories/directory_info.dart';
 import '../../../../core/error/exception.dart';
-import '../../../../core/error/failure.dart';
-import '../../../../core/local_pickers/image_picker_info.dart';
 import '../../../../service_locator.dart';
 import '../../../../shared/config/asset_path.dart';
-import '../../../../shared/extensions/failure_parsing.dart';
-import '../../../../shared/widgets/custom_snackbar.dart';
+import '../../../../shared/widgets/keyboards/close_keyboard.dart';
+import '../../../../shared/widgets/loadings/custom_loading.dart';
+import '../../../../shared/widgets/snackbars/custom_snackbar.dart';
 import '../../../home/domain/entities/meme_image_entity.dart';
 import '../../../save_image/presentation/cubit/save_image_cubit.dart';
+import '../../domain/entities/text_caption_entity.dart';
 import '../cubit/caption_image/caption_image_cubit.dart';
 
 class EditMemePage extends StatefulWidget {
@@ -31,9 +30,8 @@ class EditMemePage extends StatefulWidget {
 
 class _EditMemePageState extends State<EditMemePage> {
   bool isLoading = false;
-  File? _selectedLogo;
-  final TextEditingController _textTopController = TextEditingController();
-  final TextEditingController _textBottomController = TextEditingController();
+
+  final List<TextCaptionEntity> _textCaptions = [];
 
   @override
   void initState() {
@@ -56,98 +54,78 @@ class _EditMemePageState extends State<EditMemePage> {
 
   @override
   void dispose() {
-    _textTopController.dispose();
-    _textBottomController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print("_textTopController ${_textTopController.text}");
-    print("_textBottomController ${_textBottomController.text}");
     return Scaffold(
       appBar: AppBar(
-        title: const Text("MIM GENERATOR"),
+        title: const Text("Edit Meme"),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                _buildImagePreview(),
-                (isLoading)
-                    ? Positioned.fill(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                          child: Container(
-                            color: Colors.grey.shade200.withOpacity(0.5),
-                            child: const Center(
-                              child: CircularProgressIndicator(),
+      body: GestureDetector(
+        onTap: () => CloseKeyboard.close(context),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  _buildImagePreview(),
+                  (isLoading)
+                      ? Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                            child: Container(
+                              color: Colors.grey.shade200.withOpacity(0.5),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                             ),
                           ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ],
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildEditButton(
-                  label: "Add Logo",
-                  icon: Icons.image,
-                  onTap: _onAddLogo,
-                ),
-                const SizedBox(
-                  width: 10,
-                ),
-                _buildEditButton(
-                  label: "Add Text Top",
-                  icon: Icons.text_fields_sharp,
-                  onTap: () {
-                    _showEditingTextDialog(
-                      label: "Text Top",
-                      controller: _textTopController,
-                    );
-                  },
-                ),
-                const SizedBox(
-                  width: 10,
-                ),
-                _buildEditButton(
-                  label: "Add Text Bottom",
-                  icon: Icons.text_fields_sharp,
-                  onTap: () {
-                    _showEditingTextDialog(
-                      label: "Text Bottom",
-                      controller: _textBottomController,
-                    );
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: ElevatedButton(
-                onPressed: (isLoading) ? null : _onPreviewCaption,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text("Preview"),
+                        )
+                      : const SizedBox.shrink(),
+                ],
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              _buildAddTextButton(),
+              const SizedBox(
+                height: 10,
+              ),
+              ..._textCaptions
+                  .asMap()
+                  .map(
+                    (key, value) => MapEntry(
+                      key,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: _buildForm(index: key),
+                      ),
+                    ),
+                  )
+                  .values
+                  .toList(),
+              const SizedBox(
+                height: 20,
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width,
+                child: ElevatedButton(
+                  onPressed: (isLoading) ? null : _onPreview,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text("Preview"),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(
-              height: 50,
-            ),
-          ],
+              const SizedBox(
+                height: 50,
+              ),
+            ],
+          ),
         ),
       ),
       bottomSheet: Padding(
@@ -159,7 +137,7 @@ class _EditMemePageState extends State<EditMemePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildButton(
-              label: "Simpan",
+              label: "Save to Gallery",
               onTap: _onSaveImage,
             ),
             const SizedBox(
@@ -167,12 +145,24 @@ class _EditMemePageState extends State<EditMemePage> {
             ),
             _buildButton(
               label: "Share",
-              onTap: _onShareImage,
+              onTap: () {},
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildAddTextButton() {
+    if (_textCaptions.length < (widget.image.boxCount ?? 0)) {
+      return _buildEditButton(
+        label: "Add Text",
+        icon: Icons.text_fields_sharp,
+        onTap: _onAddText,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildImagePreview() {
@@ -216,69 +206,107 @@ class _EditMemePageState extends State<EditMemePage> {
     required Function() onTap,
     required IconData icon,
   }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(5),
-      onTap: (isLoading) ? null : onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label),
-            const SizedBox(
-              height: 5,
-            ),
-            Icon(
-              icon,
-              size: 30,
-            ),
-          ],
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(5),
+        onTap: (isLoading) ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label),
+              const SizedBox(
+                height: 5,
+              ),
+              Icon(
+                icon,
+                size: 30,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showEditingTextDialog({
-    required TextEditingController controller,
-    required String label,
-  }) async {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(label),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width,
-                child: TextFormField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    fillColor: Colors.grey[200],
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
-                ),
+  Widget _buildForm({required int index}) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            decoration: InputDecoration(
+              hintText: "Text caption ${index + 1}",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(5),
               ),
-            ],
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 0,
+                horizontal: 15,
+              ),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _textCaptions[index] = _textCaptions[index].copyWith(
+                  text: val,
+                );
+              });
+            },
           ),
-        );
-      },
+        ),
+        const SizedBox(
+          width: 7,
+        ),
+        GestureDetector(
+          child: const Icon(
+            Icons.delete_forever,
+            color: Colors.grey,
+          ),
+          onTap: () {
+            setState(() {
+              _textCaptions.removeAt(index);
+            });
+          },
+        )
+      ],
     );
   }
 
-  void _onAddLogo() async {
-    _showSelectImageActionSheet();
+  void _onAddText() {
+    if (_textCaptions.length > (widget.image.boxCount ?? 0)) {
+      // Text filled more than max box count of image
+      CustomSnackbar.warning(
+        context: context,
+        label: "Max of text box is ${widget.image.boxCount ?? 0}",
+      );
+
+      return;
+    }
+
+    setState(() {
+      _textCaptions.add(
+        const TextCaptionEntity(
+          text: "",
+        ),
+      );
+    });
   }
 
-  void _onPreviewCaption() async {
+  void _onPreview() async {
+    final List<TextCaptionEntity> cleanedTextCaptions =
+        _textCaptions.where((element) => element.text != "").toList();
+
+    if (cleanedTextCaptions.isEmpty) {
+      // empty captions
+      CustomSnackbar.warning(
+        context: context,
+        label: "Set min 1 text caption",
+      );
+
+      return;
+    }
+
     // set loading to true
     setState(() {
       isLoading = true;
@@ -288,8 +316,7 @@ class _EditMemePageState extends State<EditMemePage> {
     final bool result =
         await BlocProvider.of<CaptionImageCubit>(context).setCaption(
       memeImageId: widget.image.id,
-      text0: _textTopController.text,
-      text1: _textBottomController.text,
+      text: cleanedTextCaptions,
     );
 
     // set loading to false
@@ -308,22 +335,7 @@ class _EditMemePageState extends State<EditMemePage> {
 
   void _onSaveImage() async {
     // Show loading dialog
-    showDialog(
-      context: context,
-      builder: (contex) {
-        return AlertDialog(
-          content: Row(
-            children: [
-              const CircularProgressIndicator(),
-              Container(
-                margin: const EdgeInsets.only(left: 7),
-                child: const Text("Loading..."),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    CustomLoading.loadingWithText(context);
 
     String? imageUrl;
 
@@ -353,13 +365,6 @@ class _EditMemePageState extends State<EditMemePage> {
         throw ServerException();
       }
 
-      if (!await _onDownloadImage(
-        imageUrl: imageUrl,
-        directoryPath: directoryPath,
-      )) {
-        throw ServerException();
-      }
-
       if (!await _onSaveImageToGallery(
         filePath: directoryPath,
       )) {
@@ -381,10 +386,6 @@ class _EditMemePageState extends State<EditMemePage> {
 
     // Close loading
     Navigator.pop(context);
-  }
-
-  void _onShareImage() async {
-    _showShareActionSheet();
   }
 
   Future<bool> _onDownloadImage({
@@ -426,144 +427,4 @@ class _EditMemePageState extends State<EditMemePage> {
       return false;
     }
   }
-
-  void _showSelectImageActionSheet() {
-    // Show modalBottomSheet
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Wrap(
-          children: mockListSelectImageActions
-              .asMap()
-              .map(
-                (key, value) => MapEntry(
-                  key,
-                  ListTile(
-                    leading: Icon(value.icon),
-                    title: Text(value.title),
-                    onTap: () => _onSelectPhoto(
-                      context: context,
-                      imageSource: value.imageSource,
-                    ),
-                  ),
-                ),
-              )
-              .values
-              .toList(),
-        );
-      },
-    );
-  }
-
-  void _onSelectPhoto({
-    required BuildContext context,
-    required ImageSource imageSource,
-  }) async {
-    try {
-      // Select Image
-      File result =
-          await sl<ImagePickerInfo>().selectImage(imageSource: imageSource);
-
-      setState(() {
-        _selectedLogo = result;
-      });
-
-      // Close bottomSheet
-      Navigator.pop(context);
-
-      // TODO: Implement how to combine selected image to image template
-      // imgflip.com not support to add image in the caption image
-    } on SelectImageException {
-      // error
-      CustomSnackbar.error(
-          context: context, label: SelectImageFailure().toStringMessage());
-    }
-  }
-
-  void _showShareActionSheet() {
-    // Show modalBottomSheet
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Wrap(
-          children: mockListSelectShareActions
-              .asMap()
-              .map(
-                (key, value) => MapEntry(
-                  key,
-                  ListTile(
-                    leading: Icon(value.icon),
-                    title: Text("Share to ${value.title}"),
-                    onTap: () => _onShare(target: value.title),
-                  ),
-                ),
-              )
-              .values
-              .toList(),
-        );
-      },
-    );
-  }
-
-  void _onShare({required String target}) {
-    if (target.toUpperCase() == "FACEBOOK") {
-      _onShareToFacebook();
-    } else {
-      _onShareToTwitter();
-    }
-  }
-
-  void _onShareToFacebook() {
-    // TODO: Implement share to facebook
-  }
-
-  void _onShareToTwitter() {
-    // TODO: Implement share to twitter
-  }
 }
-
-class SelectImageActionModel {
-  IconData icon;
-  String title;
-  ImageSource imageSource;
-
-  SelectImageActionModel({
-    required this.icon,
-    required this.title,
-    required this.imageSource,
-  });
-}
-
-final List<SelectImageActionModel> mockListSelectImageActions = [
-  SelectImageActionModel(
-    icon: Icons.photo_camera,
-    title: "Camera",
-    imageSource: ImageSource.camera,
-  ),
-  SelectImageActionModel(
-    icon: Icons.perm_media,
-    title: "Gallery",
-    imageSource: ImageSource.gallery,
-  ),
-];
-
-class SelectShareActionModel {
-  IconData icon;
-  String title;
-
-  SelectShareActionModel({
-    required this.icon,
-    required this.title,
-  });
-}
-
-final List<SelectShareActionModel> mockListSelectShareActions = [
-  SelectShareActionModel(
-    icon: Icons.facebook,
-    title: "Facebook",
-  ),
-  SelectShareActionModel(
-    icon: Icons.flutter_dash,
-    title: "Twitter",
-  ),
-];

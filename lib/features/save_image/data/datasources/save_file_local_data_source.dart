@@ -1,6 +1,5 @@
 import 'package:gallery_saver/gallery_saver.dart';
 
-import '../../../../core/directories/directory_info.dart';
 import '../../../../core/error/exception.dart';
 
 abstract class SaveFileLocalDataSource {

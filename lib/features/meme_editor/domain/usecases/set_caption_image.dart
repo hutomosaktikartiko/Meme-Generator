@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entities/caption_image_entity.dart';
+import '../entities/text_caption_entity.dart';
 import '../repositories/meme_editor_repository.dart';
 
 class SetCaptionImage implements UseCase<CaptionImageEntity, Params> {
@@ -17,22 +18,20 @@ class SetCaptionImage implements UseCase<CaptionImageEntity, Params> {
   Future<Either<Failure, CaptionImageEntity>> call(Params params) async {
     return await memeEditorRepository.setCaptionImage(
       memeImageId: params.memeImageId,
-      text0: params.text0,
-      text1: params.text1,
+      text: params.text,
     );
   }
 }
 
 class Params extends Equatable {
   final String? memeImageId;
-  final String text0, text1;
+  final List<TextCaptionEntity> text;
 
   const Params({
     required this.memeImageId,
-    required this.text0,
-    required this.text1,
+    required this.text,
   });
 
   @override
-  List<Object?> get props => [memeImageId, text0, text1];
+  List<Object?> get props => [memeImageId, text,];
 }
